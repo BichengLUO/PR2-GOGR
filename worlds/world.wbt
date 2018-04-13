@@ -1,0 +1,29 @@
+#VRML_SIM R2018a utf8
+WorldInfo {
+}
+Viewpoint {
+  orientation 0.10503530364261687 -0.9918427640611993 -0.07221853202706158 5.161196293265051
+  position 0.9632492424555013 1.1836286189610898 0.5068696612486372
+}
+Background {
+  skyColor [
+    0.4 0.7 1
+  ]
+}
+DirectionalLight {
+  ambientIntensity 1
+  direction 0.1 -0.5 0.3
+}
+Floor {
+}
+Table {
+  translation 1 0 0
+  rotation 0 1 0 1.5708
+  size 1.8 0.6 1
+}
+Pr2 {
+}
+DirectionalLight {
+  ambientIntensity 1
+  direction 0 -1 0
+}
