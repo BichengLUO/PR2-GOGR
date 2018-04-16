@@ -11,12 +11,51 @@
  * <webots/differential_wheels.h>, etc.
  */
 #include <webots/robot.h>
+#include <webots/device.h>
 #include <webots/camera.h>
+#include <webots/range_finder.h>
+#include <webots/motor.h>
+#include <webots/position_sensor.h>
 
-/*
- * You may want to add macros here.
- */
-#define TIME_STEP 64
+#include <stdio.h>
+#include <stdlib.h>
+
+#define TIME_STEP 16
+#define TOLERANCE 0.05
+#define ALMOST_EQUAL(a, b) ((a < b + TOLERANCE) && (a > b - TOLERANCE))
+
+WbDeviceTag kinectColor;
+WbDeviceTag kinectRange;
+WbDeviceTag head_tilt_motor;
+WbDeviceTag head_tilt_sensor;
+
+// Simpler step function
+static void step() {
+  if (wb_robot_step(TIME_STEP) == -1) {
+    wb_robot_cleanup();
+    exit(EXIT_SUCCESS);
+  }
+}
+
+void initialize_devices() {
+  kinectColor = wb_robot_get_device("kinect color");
+  kinectRange = wb_robot_get_device("kinect range");
+  wb_camera_enable(kinectColor, TIME_STEP);
+  wb_range_finder_enable(kinectRange, TIME_STEP);
+  
+  head_tilt_motor = wb_robot_get_device("head_tilt_joint");
+  head_tilt_sensor = wb_robot_get_device("head_tilt_joint_sensor");
+  wb_position_sensor_enable(head_tilt_sensor, TIME_STEP);
+}
+
+void set_head_tilt(double tilt, bool wait_on_feedback) {
+  wb_motor_set_position(head_tilt_motor, tilt);
+
+  if (wait_on_feedback) {
+    while (! ALMOST_EQUAL(wb_position_sensor_get_value(head_tilt_sensor), tilt))
+      step();
+  }
+}
 
 /*
  * This is the main program.
@@ -27,35 +66,10 @@ int main(int argc, char **argv)
 {
   /* necessary to initialize webots stuff */
   wb_robot_init();
-
-  /*
-   * You should declare here WbDeviceTag variables for storing
-   * robot devices like this:
-   *  WbDeviceTag my_sensor = wb_robot_get_device("my_sensor");
-   *  WbDeviceTag my_actuator = wb_robot_get_device("my_actuator");
-   */
-   WbDeviceTag kinectColor = wb_robot_get_device("kinect color");
-   WbDeviceTag kinectRange = wb_robot_get_device("kinect range");
-   wb_camera_enable(kinectColor, TIME_STEP);
-   wb_range_finder_enable(kinectRange, TIME_STEP);
-  /* main loop
-   * Perform simulation steps of TIME_STEP milliseconds
-   * and leave the loop when the simulation is over
-   */
+  initialize_devices();
+  set_head_tilt(M_PI_4, true);
   while (wb_robot_step(TIME_STEP) != -1) {
 
-    /*
-     * Read the sensors :
-     * Enter here functions to read sensor data, like:
-     *  double val = wb_distance_sensor_get_value(my_sensor);
-     */
-
-    /* Process sensor data here */
-
-    /*
-     * Enter here functions to send actuator commands, like:
-     * wb_differential_wheels_set_speed(100.0,100.0);
-     */
   };
 
   /* Enter your cleanup code here */
