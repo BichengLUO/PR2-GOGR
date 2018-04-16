@@ -1,3 +1,4 @@
 *.o
 *.d
-build/*
+controllers/pr2_controller/build/*
+controllers/pr2_controller
