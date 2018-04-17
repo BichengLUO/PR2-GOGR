@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "grasp_plan.h"
+
 // PR2 constants
 #define MAX_WHEEL_SPEED 3.0 // maximum velocity for the wheels [rad / s]
 #define WHEELS_DISTANCE 0.4492 // distance between 2 caster wheels (the four wheels are located in square) [m]
@@ -34,7 +36,12 @@
 #define ALMOST_EQUAL(a, b) ((a < b + TOLERANCE) && (a > b - TOLERANCE))
 #define ALMOST_EQUAL_TOL(a, b, t) ((a < b + t) && (a > b - t))
 
-#define MAXIMUM_NUMBER_OF_COORDINATES 200  // Size of the history
+#define MAXIMUM_NUMBER_OF_COORDINATES 1000  // Size of the history
+
+#define SHOULDER_ROLL_CNT 5
+#define SHOULDER_LIFT_CNT 5
+#define UPPER_ARM_ROLL_CNT 5
+#define ELBOW_LIFT_CNT 5
 
 // helper constants to distinguish the motors
 enum { FLL_WHEEL, FLR_WHEEL, FRL_WHEEL, FRR_WHEEL, BLL_WHEEL, BLR_WHEEL, BRL_WHEEL, BRR_WHEEL };
@@ -419,19 +426,14 @@ void traverse_all_arm_position() {
   double upper_arm_roll_max = wb_motor_get_max_position(right_arm_motors[UPPER_ARM_ROLL]);
   double elbow_lift_max = wb_motor_get_max_position(right_arm_motors[ELBOW_LIFT]);
 
-  int shoulder_roll_cnt = 20;
-  int shoulder_lift_cnt = 20;
-  int upper_arm_roll_cnt = 20;
-  int elbow_lift_cnt = 20;
-
-  for (int i1 = 0; i1 <= shoulder_roll_cnt; i1++) {
-    double shoulder_roll = shoulder_roll_min + (shoulder_roll_max - shoulder_roll_min - 0.01) * i1 / shoulder_roll_cnt;
-    for (int i2 = 0; i2 <= shoulder_lift_cnt; i2++) {
-      double shoulder_lift = shoulder_lift_min + (shoulder_lift_max - shoulder_lift_min - 0.01) * i2 / shoulder_lift_cnt;
-      for (int i3 = 0; i3 <= upper_arm_roll_cnt; i3++) {
-        double upper_arm_roll = upper_arm_roll_min + (upper_arm_roll_max - upper_arm_roll_min - 0.01) * i3 / upper_arm_roll_cnt;
-        for (int i4 = 0; i4 <= elbow_lift_cnt; i4++) {
-          double elbow_lift = elbow_lift_min + (elbow_lift_max - elbow_lift_min - 0.01) * i4 / elbow_lift_cnt;
+  for (int i1 = 0; i1 <= SHOULDER_ROLL_CNT; i1++) {
+    double shoulder_roll = shoulder_roll_min + (shoulder_roll_max - shoulder_roll_min - 0.01) * i1 / SHOULDER_ROLL_CNT;
+    for (int i2 = 0; i2 <= SHOULDER_LIFT_CNT; i2++) {
+      double shoulder_lift = shoulder_lift_min + (shoulder_lift_max - shoulder_lift_min - 0.01) * i2 / SHOULDER_LIFT_CNT;
+      for (int i3 = 0; i3 <= UPPER_ARM_ROLL_CNT; i3++) {
+        double upper_arm_roll = upper_arm_roll_min + (upper_arm_roll_max - upper_arm_roll_min - 0.01) * i3 / UPPER_ARM_ROLL_CNT;
+        for (int i4 = 0; i4 <= ELBOW_LIFT_CNT; i4++) {
+          double elbow_lift = elbow_lift_min + (elbow_lift_max - elbow_lift_min - 0.01) * i4 / ELBOW_LIFT_CNT;
           set_right_arm_position(shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, 0.0, true);
           const double *l_finger_pos = wb_supervisor_node_get_position(l_finger_node);
           const double *r_finger_pos = wb_supervisor_node_get_position(r_finger_node);
@@ -482,7 +484,19 @@ int main(int argc, char **argv)
   initialize_devices();
   set_initial_position();
 
+#ifdef BUILD_REACHABILITY_MAP
+  printf("Traversing start\n");
   traverse_all_arm_position();
+  printf("Traversing end\n");
+#endif
+
+  init_planner(SHOULDER_ROLL_CNT, SHOULDER_LIFT_CNT, UPPER_ARM_ROLL_CNT, ELBOW_LIFT_CNT);
+  double arm_params[4];
+  double target_pos[] = {0.5, 1.0, 0.0};
+  plan_grasp(target_pos, arm_params);
+  set_gripper(false, true, 0.0, false);
+  set_right_arm_position(arm_params[0], arm_params[1], arm_params[2], arm_params[3], 0.0, true);
+  
   while (wb_robot_step(TIME_STEP) != -1) {
 
   };
@@ -491,6 +505,7 @@ int main(int argc, char **argv)
 
   /* This is necessary to cleanup webots resources */
   wb_robot_cleanup();
+  clear_planner();
 
   return 0;
 }
