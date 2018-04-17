@@ -17,6 +17,7 @@
 #include <webots/motor.h>
 #include <webots/position_sensor.h>
 #include <webots/touch_sensor.h>
+#include <webots/supervisor.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -333,15 +334,14 @@ void robot_go_forward(double distance) {
 
 void set_initial_position() {
   set_head_tilt(M_PI_4, false);
-  set_gripper(false, true, 0.0, true);
-  robot_go_forward(0.09);
-  set_gripper(false, false, 20.0, true);
-  robot_go_forward(-0.5);
   set_torso_height(0.2, true);
   set_left_arm_position(1.0, 1.35, 0.0, -2.2, 0.0, true);
 }
 
 void traverse_all_arm_position() {
+  WbNodeRef l_finger_node = wb_supervisor_node_get_from_def("r_gripper_l_finger_tip_link");
+  WbNodeRef r_finger_node = wb_supervisor_node_get_from_def("r_gripper_r_finger_tip_link");
+
   double shoulder_roll_min = wb_motor_get_min_position(right_arm_motors[SHOULDER_ROLL]) + 0.5;
   double shoulder_lift_min = wb_motor_get_min_position(right_arm_motors[SHOULDER_LIFT]) + 0.5;
   double upper_arm_roll_min = wb_motor_get_min_position(right_arm_motors[UPPER_ARM_ROLL]) + 0.5;
@@ -357,7 +357,19 @@ void traverse_all_arm_position() {
       for (double upper_arm_roll = upper_arm_roll_min; upper_arm_roll <= upper_arm_roll_max; upper_arm_roll += 0.1) {
         for (double elbow_lift = elbow_lift_min; elbow_lift <= elbow_lift_max; elbow_lift += 0.1) {
           set_right_arm_position(shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, 0.0, true);
-          printf("[%lf, %lf, %lf, %lf]\n", shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift);
+          const double *l_finger_pos = wb_supervisor_node_get_position(l_finger_node);
+          const double *r_finger_pos = wb_supervisor_node_get_position(r_finger_node);
+          double pos[3] = {(l_finger_pos[0] + r_finger_pos[0]) / 2.0,
+                               (l_finger_pos[1] + r_finger_pos[1]) / 2.0,
+                               (l_finger_pos[2] + r_finger_pos[2]) / 2.0};
+          printf("[%lf, %lf, %lf, %lf] [%lf, %lf, %lf]\n",
+            shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift,
+            pos[0], pos[1], pos[2]);
+          FILE *f = fopen("reachability_map.txt", "a");
+          fprintf(f, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n",
+            shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift,
+            pos[0], pos[1], pos[2]);
+          fclose(f);
         }
       }
     }
