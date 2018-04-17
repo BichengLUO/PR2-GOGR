@@ -419,10 +419,19 @@ void traverse_all_arm_position() {
   double upper_arm_roll_max = wb_motor_get_max_position(right_arm_motors[UPPER_ARM_ROLL]);
   double elbow_lift_max = wb_motor_get_max_position(right_arm_motors[ELBOW_LIFT]);
 
-  for (double shoulder_roll = shoulder_roll_min; shoulder_roll <= shoulder_roll_max; shoulder_roll += 0.1) {
-    for (double shoulder_lift = shoulder_lift_min; shoulder_lift <= shoulder_lift_max; shoulder_lift += 0.1) {
-      for (double upper_arm_roll = upper_arm_roll_min; upper_arm_roll <= upper_arm_roll_max; upper_arm_roll += 0.1) {
-        for (double elbow_lift = elbow_lift_min; elbow_lift <= elbow_lift_max; elbow_lift += 0.1) {
+  int shoulder_roll_cnt = 20;
+  int shoulder_lift_cnt = 20;
+  int upper_arm_roll_cnt = 20;
+  int elbow_lift_cnt = 20;
+
+  for (int i1 = 0; i1 <= shoulder_roll_cnt; i1++) {
+    double shoulder_roll = shoulder_roll_min + (shoulder_roll_max - shoulder_roll_min - 0.01) * i1 / shoulder_roll_cnt;
+    for (int i2 = 0; i2 <= shoulder_lift_cnt; i2++) {
+      double shoulder_lift = shoulder_lift_min + (shoulder_lift_max - shoulder_lift_min - 0.01) * i2 / shoulder_lift_cnt;
+      for (int i3 = 0; i3 <= upper_arm_roll_cnt; i3++) {
+        double upper_arm_roll = upper_arm_roll_min + (upper_arm_roll_max - upper_arm_roll_min - 0.01) * i3 / upper_arm_roll_cnt;
+        for (int i4 = 0; i4 <= elbow_lift_cnt; i4++) {
+          double elbow_lift = elbow_lift_min + (elbow_lift_max - elbow_lift_min - 0.01) * i4 / elbow_lift_cnt;
           set_right_arm_position(shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, 0.0, true);
           const double *l_finger_pos = wb_supervisor_node_get_position(l_finger_node);
           const double *r_finger_pos = wb_supervisor_node_get_position(r_finger_node);
