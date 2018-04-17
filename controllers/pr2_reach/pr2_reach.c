@@ -1,5 +1,5 @@
 /*
- * File:          pr2_controller.c
+ * File:          pr2_reach.c
  * Date:
  * Description:
  * Author:
@@ -256,8 +256,30 @@ void set_gripper(bool left, bool open, double torqueWhenGripping, bool wait_on_f
 void set_initial_position() {
   set_head_tilt(M_PI_4, false);
   set_torso_height(0.2, true);
-  set_left_arm_position(1.0, 1.35, 0.0, -2.2, 0.0, false);
-  set_right_arm_position(0, 1.35, 0.0, -2.2, 0.0, true);
+  set_left_arm_position(1.0, 1.35, 0.0, -2.2, 0.0, true);
+}
+
+void traverse_all_arm_position() {
+  double shoulder_roll_min = wb_motor_get_min_position(right_arm_motors[SHOULDER_ROLL]) + 0.5;
+  double shoulder_lift_min = wb_motor_get_min_position(right_arm_motors[SHOULDER_LIFT]) + 0.5;
+  double upper_arm_roll_min = wb_motor_get_min_position(right_arm_motors[UPPER_ARM_ROLL]) + 0.5;
+  double elbow_lift_min = wb_motor_get_min_position(right_arm_motors[ELBOW_LIFT]) + 0.5;
+
+  double shoulder_roll_max = wb_motor_get_max_position(right_arm_motors[SHOULDER_ROLL]);
+  double shoulder_lift_max = wb_motor_get_max_position(right_arm_motors[SHOULDER_LIFT]);
+  double upper_arm_roll_max = wb_motor_get_max_position(right_arm_motors[UPPER_ARM_ROLL]);
+  double elbow_lift_max = wb_motor_get_max_position(right_arm_motors[ELBOW_LIFT]);
+
+  for (double shoulder_roll = shoulder_roll_min; shoulder_roll <= shoulder_roll_max; shoulder_roll += 0.1) {
+    for (double shoulder_lift = shoulder_lift_min; shoulder_lift <= shoulder_lift_max; shoulder_lift += 0.1) {
+      for (double upper_arm_roll = upper_arm_roll_min; upper_arm_roll <= upper_arm_roll_max; upper_arm_roll += 0.1) {
+        for (double elbow_lift = elbow_lift_min; elbow_lift <= elbow_lift_max; elbow_lift += 0.1) {
+          printf("[%lf, %lf, %lf, %lf]\n", shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift);
+          set_right_arm_position(shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, 0.0, true);
+        }
+      }
+    }
+  }
 }
 
 int main(int argc, char **argv)
@@ -267,6 +289,7 @@ int main(int argc, char **argv)
   initialize_devices();
   set_initial_position();
 
+  traverse_all_arm_position();
   while (wb_robot_step(TIME_STEP) != -1) {
 
   };

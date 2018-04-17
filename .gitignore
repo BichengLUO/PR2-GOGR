@@ -1,4 +1,6 @@
 *.o
 *.d
 controllers/pr2_controller/build/*
-controllers/pr2_controller
+controllers/pr2_controller/pr2_controller
+controllers/pr2_reach/build/*
+controllers/pr2_reach/pr2_reach
