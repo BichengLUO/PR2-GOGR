@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // PR2 constants
 #define MAX_WHEEL_SPEED 3.0 // maximum velocity for the wheels [rad / s]
@@ -31,6 +32,9 @@
 #define TIME_STEP 16
 #define TOLERANCE 0.05
 #define ALMOST_EQUAL(a, b) ((a < b + TOLERANCE) && (a > b - TOLERANCE))
+#define ALMOST_EQUAL_TOL(a, b, t) ((a < b + t) && (a > b - t))
+
+#define MAXIMUM_NUMBER_OF_COORDINATES 200  // Size of the history
 
 // helper constants to distinguish the motors
 enum { FLL_WHEEL, FLR_WHEEL, FRL_WHEEL, FRR_WHEEL, BLL_WHEEL, BLR_WHEEL, BRL_WHEEL, BRR_WHEEL };
@@ -103,8 +107,8 @@ void initialize_devices() {
   for (int i = 0; i < 5; ++i) {
     wb_position_sensor_enable(left_arm_sensors[i], TIME_STEP);
     wb_position_sensor_enable(right_arm_sensors[i], TIME_STEP);
-    wb_motor_set_velocity(left_arm_motors[i], 1.0);
-    wb_motor_set_velocity(right_arm_motors[i], 1.0);
+    wb_motor_set_velocity(left_arm_motors[i], 0.5);
+    wb_motor_set_velocity(right_arm_motors[i], 0.5);
   }
 
   torso_motor = wb_robot_get_device("torso_lift_joint");
@@ -193,7 +197,7 @@ void set_right_arm_position(double shoulder_roll, double shoulder_lift, double u
   wb_motor_set_position(right_arm_motors[UPPER_ARM_ROLL], upper_arm_roll);
   wb_motor_set_position(right_arm_motors[ELBOW_LIFT], elbow_lift);
   wb_motor_set_position(right_arm_motors[WRIST_ROLL], wrist_roll);
-
+  double last_sensors[5];
   if (wait_on_feedback) {
     while (
       ! ALMOST_EQUAL(wb_position_sensor_get_value(right_arm_sensors[SHOULDER_ROLL]), shoulder_roll) ||
@@ -203,6 +207,21 @@ void set_right_arm_position(double shoulder_roll, double shoulder_lift, double u
       ! ALMOST_EQUAL(wb_position_sensor_get_value(right_arm_sensors[WRIST_ROLL]), wrist_roll)
     ) {
       step();
+      //Avoid freezing
+      double cur_sensors[5];
+      cur_sensors[0] = wb_position_sensor_get_value(right_arm_sensors[SHOULDER_ROLL]);
+      cur_sensors[1] = wb_position_sensor_get_value(right_arm_sensors[SHOULDER_LIFT]);
+      cur_sensors[2] = wb_position_sensor_get_value(right_arm_sensors[UPPER_ARM_ROLL]);
+      cur_sensors[3] = wb_position_sensor_get_value(right_arm_sensors[ELBOW_LIFT]);
+      cur_sensors[4] = wb_position_sensor_get_value(right_arm_sensors[WRIST_ROLL]);
+      if (ALMOST_EQUAL_TOL(cur_sensors[0], last_sensors[0], 0.005) &&
+          ALMOST_EQUAL_TOL(cur_sensors[1], last_sensors[1], 0.005) &&
+          ALMOST_EQUAL_TOL(cur_sensors[2], last_sensors[2], 0.005) &&
+          ALMOST_EQUAL_TOL(cur_sensors[3], last_sensors[3], 0.005) &&
+          ALMOST_EQUAL_TOL(cur_sensors[4], last_sensors[4], 0.005)) {
+            break;
+          }
+      memcpy(last_sensors, cur_sensors, 5 * sizeof(double));
     }
   }
 }
@@ -335,14 +354,62 @@ void robot_go_forward(double distance) {
 void set_initial_position() {
   set_head_tilt(M_PI_4, false);
   set_torso_height(0.2, true);
-  set_left_arm_position(1.0, 1.35, 0.0, -2.2, 0.0, true);
+  set_left_arm_position(2.0, 1.35, 0.0, -2.2, 0.0, true);
+}
+
+// Create the trail shape with the correct number of coordinates.
+void create_trail_shape() {
+  // If TRAIL exists in the world then silently removes it.
+  WbNodeRef existing_trail = wb_supervisor_node_get_from_def("TRAIL");
+  if (existing_trail)
+    wb_supervisor_node_remove(existing_trail);
+
+  int i;
+  char trail_string[0x10000] = "\0";  // Initialize a big string which will contain the TRAIL node.
+
+  // Create the TRAIL Shape.
+  strcat(trail_string, "DEF TRAIL Shape {\n");
+  strcat(trail_string, "  appearance Appearance {\n");
+  strcat(trail_string, "    material Material {\n");
+  strcat(trail_string, "      diffuseColor 0 1 0\n");
+  strcat(trail_string, "      emissiveColor 0 1 0\n");
+  strcat(trail_string, "    }\n");
+  strcat(trail_string, "  }\n");
+  strcat(trail_string, "  geometry DEF TRAIL_LINE_SET IndexedLineSet {\n");
+  strcat(trail_string, "    coord Coordinate {\n");
+  strcat(trail_string, "      point [\n");
+  for (i = 0; i < MAXIMUM_NUMBER_OF_COORDINATES; ++i)
+    strcat(trail_string, "      0 0 0\n");
+  strcat(trail_string, "      ]\n");
+  strcat(trail_string, "    }\n");
+  strcat(trail_string, "    coordIndex [\n");
+  for (i = 0; i < MAXIMUM_NUMBER_OF_COORDINATES; ++i)
+    strcat(trail_string, "      0 0 -1\n");
+  strcat(trail_string, "    ]\n");
+  strcat(trail_string, "  }\n");
+  strcat(trail_string, "}\n");
+
+  // Import TRAIL and append it as the world root nodes.
+  WbFieldRef root_children_field = wb_supervisor_node_get_field(wb_supervisor_node_get_root(), "children");
+  wb_supervisor_field_import_mf_node_from_string(root_children_field, -1, trail_string);
 }
 
 void traverse_all_arm_position() {
+  create_trail_shape();
+
+  // Get interesting references to the TRAIL subnodes.
+  WbNodeRef trail_line_set_node = wb_supervisor_node_get_from_def("TRAIL_LINE_SET");
+  WbNodeRef coordinates_node = wb_supervisor_field_get_sf_node(wb_supervisor_node_get_field(trail_line_set_node, "coord"));
+  WbFieldRef point_field = wb_supervisor_node_get_field(coordinates_node, "point");
+  WbFieldRef coord_index_field = wb_supervisor_node_get_field(trail_line_set_node, "coordIndex");
+
+  int index = 0;           // This points to the current position to be drawn.
+  bool first_step = true;  // Only equals to true during the first step.
+  
   WbNodeRef l_finger_node = wb_supervisor_node_get_from_def("r_gripper_l_finger_tip_link");
   WbNodeRef r_finger_node = wb_supervisor_node_get_from_def("r_gripper_r_finger_tip_link");
 
-  double shoulder_roll_min = wb_motor_get_min_position(right_arm_motors[SHOULDER_ROLL]) + 0.5;
+  double shoulder_roll_min = wb_motor_get_min_position(right_arm_motors[SHOULDER_ROLL]) + 1.5;
   double shoulder_lift_min = wb_motor_get_min_position(right_arm_motors[SHOULDER_LIFT]) + 0.5;
   double upper_arm_roll_min = wb_motor_get_min_position(right_arm_motors[UPPER_ARM_ROLL]) + 0.5;
   double elbow_lift_min = wb_motor_get_min_position(right_arm_motors[ELBOW_LIFT]) + 0.5;
@@ -370,6 +437,29 @@ void traverse_all_arm_position() {
             shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift,
             pos[0], pos[1], pos[2]);
           fclose(f);
+
+          // Add the new target translation in the line set.
+          wb_supervisor_field_set_mf_vec3f(point_field, index, pos);
+
+          // Update the line set indices.
+          if (index > 0) {
+            // Link successive indices.
+            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (index - 1), index - 1);
+            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (index - 1) + 1, index);
+          } else if (index == 0 && first_step == false) {
+            // Link the first and the last indices.
+            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (MAXIMUM_NUMBER_OF_COORDINATES - 1), 0);
+            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (MAXIMUM_NUMBER_OF_COORDINATES - 1) + 1,
+                                            MAXIMUM_NUMBER_OF_COORDINATES - 1);
+          }
+          // Unset the next indices.
+          wb_supervisor_field_set_mf_int32(coord_index_field, 3 * index, index);
+          wb_supervisor_field_set_mf_int32(coord_index_field, 3 * index + 1, index);
+
+          // Update global variables.
+          first_step = false;
+          index++;
+          index = index % MAXIMUM_NUMBER_OF_COORDINATES;
         }
       }
     }
@@ -382,6 +472,7 @@ int main(int argc, char **argv)
   wb_robot_init();
   initialize_devices();
   set_initial_position();
+
   traverse_all_arm_position();
   while (wb_robot_step(TIME_STEP) != -1) {
 
