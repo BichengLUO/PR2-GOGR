@@ -21,6 +21,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// PR2 constants
+#define MAX_WHEEL_SPEED 3.0 // maximum velocity for the wheels [rad / s]
+#define WHEELS_DISTANCE 0.4492 // distance between 2 caster wheels (the four wheels are located in square) [m]
+#define SUB_WHEELS_DISTANCE 0.098 // distance between 2 sub wheels of a caster wheel [m]
+#define WHEEL_RADIUS 0.08 // wheel radius
+
 #define TIME_STEP 16
 #define TOLERANCE 0.05
 #define ALMOST_EQUAL(a, b) ((a < b + TOLERANCE) && (a > b - TOLERANCE))
@@ -49,6 +55,9 @@ WbDeviceTag left_finger_motors[4];
 WbDeviceTag left_finger_sensors[4];
 WbDeviceTag left_finger_contact_sensors[2];
 WbDeviceTag right_finger_contact_sensors[2];
+
+WbDeviceTag wheel_motors[8];
+WbDeviceTag wheel_sensors[8];
 
 // Simpler step function
 static void step() {
@@ -132,6 +141,30 @@ void initialize_devices() {
   for (int i = 0; i < 4; ++i) {
     wb_position_sensor_enable(left_finger_sensors[i], TIME_STEP);
     wb_position_sensor_enable(right_finger_sensors[i], TIME_STEP);
+  }
+
+  wheel_motors[FLL_WHEEL]  = wb_robot_get_device("fl_caster_l_wheel_joint");
+  wheel_motors[FLR_WHEEL]  = wb_robot_get_device("fl_caster_r_wheel_joint");
+  wheel_motors[FRL_WHEEL]  = wb_robot_get_device("fr_caster_l_wheel_joint");
+  wheel_motors[FRR_WHEEL]  = wb_robot_get_device("fr_caster_r_wheel_joint");
+  wheel_motors[BLL_WHEEL]  = wb_robot_get_device("bl_caster_l_wheel_joint");
+  wheel_motors[BLR_WHEEL]  = wb_robot_get_device("bl_caster_r_wheel_joint");
+  wheel_motors[BRL_WHEEL]  = wb_robot_get_device("br_caster_l_wheel_joint");
+  wheel_motors[BRR_WHEEL]  = wb_robot_get_device("br_caster_r_wheel_joint");
+  wheel_sensors[FLL_WHEEL] = wb_robot_get_device("fl_caster_l_wheel_joint_sensor");
+  wheel_sensors[FLR_WHEEL] = wb_robot_get_device("fl_caster_r_wheel_joint_sensor");
+  wheel_sensors[FRL_WHEEL] = wb_robot_get_device("fr_caster_l_wheel_joint_sensor");
+  wheel_sensors[FRR_WHEEL] = wb_robot_get_device("fr_caster_r_wheel_joint_sensor");
+  wheel_sensors[BLL_WHEEL] = wb_robot_get_device("bl_caster_l_wheel_joint_sensor");
+  wheel_sensors[BLR_WHEEL] = wb_robot_get_device("bl_caster_r_wheel_joint_sensor");
+  wheel_sensors[BRL_WHEEL] = wb_robot_get_device("br_caster_l_wheel_joint_sensor");
+  wheel_sensors[BRR_WHEEL] = wb_robot_get_device("br_caster_r_wheel_joint_sensor");
+
+  for (int i = 0; i < 8; ++i) {
+    wb_position_sensor_enable(wheel_sensors[i], TIME_STEP);
+    // init the motors for speed control
+    wb_motor_set_position(wheel_motors[i], INFINITY);
+    wb_motor_set_velocity(wheel_motors[i], 0.0);
   }
 }
 
@@ -253,8 +286,57 @@ void set_gripper(bool left, bool open, double torqueWhenGripping, bool wait_on_f
   }
 }
 
+void set_wheels_speeds(
+  double fll, double flr, double frl, double frr,
+  double bll, double blr, double brl, double brr
+) {
+  wb_motor_set_velocity(wheel_motors[FLL_WHEEL], fll);
+  wb_motor_set_velocity(wheel_motors[FLR_WHEEL], flr);
+  wb_motor_set_velocity(wheel_motors[FRL_WHEEL], frl);
+  wb_motor_set_velocity(wheel_motors[FRR_WHEEL], frr);
+  wb_motor_set_velocity(wheel_motors[BLL_WHEEL], bll);
+  wb_motor_set_velocity(wheel_motors[BLR_WHEEL], blr);
+  wb_motor_set_velocity(wheel_motors[BRL_WHEEL], brl);
+  wb_motor_set_velocity(wheel_motors[BRR_WHEEL], brr);
+}
+
+void set_wheels_speed(double speed) {
+  set_wheels_speeds(speed, speed, speed, speed, speed, speed, speed, speed);
+}
+
+void stop_wheels() {
+  set_wheels_speeds(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+}
+
+void robot_go_forward(double distance) {
+  double max_wheel_speed = distance > 0 ? MAX_WHEEL_SPEED : - MAX_WHEEL_SPEED;
+  set_wheels_speed(max_wheel_speed);
+
+  double initial_wheel0_position = wb_position_sensor_get_value(wheel_sensors[FLL_WHEEL]);
+
+  while (true) {
+    double wheel0_position = wb_position_sensor_get_value(wheel_sensors[FLL_WHEEL]);
+    double wheel0_travel_distance = fabs(WHEEL_RADIUS * (wheel0_position - initial_wheel0_position)); // travel distance done by the wheel
+
+    if (wheel0_travel_distance > fabs(distance))
+      break;
+
+    // reduce the speed before reaching the target
+    if (fabs(distance) - wheel0_travel_distance < 0.025)
+      set_wheels_speed(0.1 * max_wheel_speed);
+
+    step();
+  }
+
+  stop_wheels();
+}
+
 void set_initial_position() {
   set_head_tilt(M_PI_4, false);
+  set_gripper(false, true, 0.0, true);
+  robot_go_forward(0.09);
+  set_gripper(false, false, 20.0, true);
+  robot_go_forward(-0.5);
   set_torso_height(0.2, true);
   set_left_arm_position(1.0, 1.35, 0.0, -2.2, 0.0, true);
 }
@@ -274,8 +356,8 @@ void traverse_all_arm_position() {
     for (double shoulder_lift = shoulder_lift_min; shoulder_lift <= shoulder_lift_max; shoulder_lift += 0.1) {
       for (double upper_arm_roll = upper_arm_roll_min; upper_arm_roll <= upper_arm_roll_max; upper_arm_roll += 0.1) {
         for (double elbow_lift = elbow_lift_min; elbow_lift <= elbow_lift_max; elbow_lift += 0.1) {
-          printf("[%lf, %lf, %lf, %lf]\n", shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift);
           set_right_arm_position(shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, 0.0, true);
+          printf("[%lf, %lf, %lf, %lf]\n", shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift);
         }
       }
     }
@@ -288,7 +370,6 @@ int main(int argc, char **argv)
   wb_robot_init();
   initialize_devices();
   set_initial_position();
-
   traverse_all_arm_position();
   while (wb_robot_step(TIME_STEP) != -1) {
 
