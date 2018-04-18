@@ -2,9 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define TOLERANCE 0.05
 #define ALMOST_EQUAL(a, b) ((a < b + TOLERANCE) && (a > b - TOLERANCE))
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
 float *back_depth;
 int w;
@@ -15,7 +18,7 @@ double v_fov;
 double cam_pos[3];
 double cam_rot[9];
 
-void init_depth_detect(int w_, int h_, double h_fov_, double v_fov_, double cam_pos_[3], double cam_rot_[9]) {
+void init_depth_detect(int w_, int h_, double h_fov_, double v_fov_, const double cam_pos_[3], const double cam_rot_[9]) {
     w = w_;
     h = h_;
     h_fov = h_fov_;
@@ -26,34 +29,36 @@ void init_depth_detect(int w_, int h_, double h_fov_, double v_fov_, double cam_
     load_back_depth(back_depth);
 }
 
-void save_back_depth(const float *depth) {
-    FILE *f = fopen("back_depth.txt", "wb");
+void save_back_depth(int w, int h, const float *depth) {
+    FILE *f = fopen("back_depth.bin", "wb");
     fwrite(depth, sizeof(float), w * h, f);
     fclose(f);
 }
 
 void load_back_depth(float *depth) {
-    FILE *f = fopen("back_depth.txt", "rb");
+    FILE *f = fopen("back_depth.bin", "rb");
     fread(depth, sizeof(float), w * h, f);
     fclose(f);
 }
 
-void depth_detect(const float *depth, double point[3]) {
-    int min_x = 0, min_y = 0;
-    int max_x = w - 1, max_y = h - 1;
+void depth_detect(const float *depth, double point[3],
+                  int *min_x, int *min_y,
+                  int *max_x, int *max_y) {
+    *min_x = w - 1, *min_y = h - 1;
+    *max_x = 0, *max_y = 0;
     for (int x = 0; x < w; x++) {
         for (int y = 0; y < h; y++) {
             if (ALMOST_EQUAL(depth[y * w + x], back_depth[y * w + x])) {
                 continue;
             }
-            min_x = min(min_x, x);
-            min_y = min(min_y, y);
-            max_x = max(max_x, x);
-            max_y = max(max_y, y);
+            *min_x = MIN(*min_x, x);
+            *min_y = MIN(*min_y, y);
+            *max_x = MAX(*max_x, x);
+            *max_y = MAX(*max_y, y);
         }
     }
-    int center_x = (min_x + max_x) / 2;
-    int center_y = (min_y + max_y) / 2;
+    int center_x = (*min_x + *max_x) / 2;
+    int center_y = (*min_y + *max_y) / 2;
     float depth_val = depth[center_y * w + center_x];
     convert_depth_pixel_to_point(depth_val, center_x, center_y, point);
 }
@@ -76,5 +81,5 @@ void convert_depth_pixel_to_point(float depth, int x, int y, double point[3]) {
 }
 
 void clear_depth_detect() {
-    free(planner_data);
+    free(back_depth);
 }

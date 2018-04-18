@@ -17,6 +17,8 @@
 #include <webots/motor.h>
 #include <webots/position_sensor.h>
 #include <webots/touch_sensor.h>
+#include <webots/supervisor.h>
+#include <webots/display.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,12 +29,15 @@
 #define TOLERANCE 0.05
 #define ALMOST_EQUAL(a, b) ((a < b + TOLERANCE) && (a > b - TOLERANCE))
 
+//#define CAPTURE_BACK_DEPTH
+
 // helper constants to distinguish the motors
 enum { FLL_WHEEL, FLR_WHEEL, FRL_WHEEL, FRR_WHEEL, BLL_WHEEL, BLR_WHEEL, BRL_WHEEL, BRR_WHEEL };
 enum { FL_ROTATION, FR_ROTATION, BL_ROTATION, BR_ROTATION };
 enum { SHOULDER_ROLL, SHOULDER_LIFT, UPPER_ARM_ROLL, ELBOW_LIFT, WRIST_ROLL };
 enum { LEFT_FINGER, RIGHT_FINGER, LEFT_TIP, RIGHT_TIP };
 
+WbDeviceTag display;
 WbDeviceTag kinectColor;
 WbDeviceTag kinectRange;
 WbDeviceTag head_tilt_motor;
@@ -61,6 +66,7 @@ static void step() {
 }
 
 void initialize_devices() {
+  display = wb_robot_get_device("display");
   kinectColor = wb_robot_get_device("kinect color");
   kinectRange = wb_robot_get_device("kinect range");
   wb_camera_enable(kinectColor, TIME_STEP);
@@ -258,18 +264,32 @@ void set_gripper(bool left, bool open, double torqueWhenGripping, bool wait_on_f
 void set_initial_position() {
   set_head_tilt(M_PI_4, false);
   set_torso_height(0.2, true);
+  set_left_arm_position(1.0, 0.0, 0.0, 0.0, 0.0, false);
+  set_right_arm_position(-1.0, 0.0, 0.0, 0.0, 0.0, true);
   set_left_arm_position(1.0, 1.35, 0.0, -2.2, 0.0, false);
-  set_right_arm_position(0, 1.35, 0.0, -2.2, 0.0, true);
+  set_right_arm_position(-1.0, 1.35, 0.0, -2.2, 0.0, true);
+
+  wb_display_attach_camera(display, kinectColor);
 }
 
 void init_depth_detector() {
+  WbNodeRef kinect_node = wb_supervisor_node_get_from_def("kinect");
+  const double *cam_pos = wb_supervisor_node_get_position(kinect_node);
+  const double *cam_rot = wb_supervisor_node_get_orientation(kinect_node);
   int w = wb_range_finder_get_width(kinectRange);
-  int h = wb_range_finder_get_width(kinectRange);
+  int h = wb_range_finder_get_height(kinectRange);
   double h_fov = wb_range_finder_get_fov(kinectRange);
   double v_fov = 2 * atan(tan(h_fov * 0.5 ) / (w / (double)h));
-  double *cam_pos = wb_supervisor_node_get_position();
-  double *cam_pos = wb_supervisor_node_get_position();
-  init_depth_detect(w, h, h_fov, v_fov, );
+  init_depth_detect(w, h, h_fov, v_fov, cam_pos, cam_rot);
+}
+
+void detect_obj() {
+  const float *depth = wb_range_finder_get_range_image(kinectRange);
+  int min_x, min_y, max_x, max_y;
+  double point[3];
+  depth_detect(depth, point, &min_x, &min_y, &max_x, &max_y);
+  printf("Object depth rect: [%d %d %d %d]\n", min_x, min_y, max_x, max_y);
+  wb_display_draw_rectangle(display, min_x, min_y, max_x - min_x, max_y - min_y);
 }
 
 int main(int argc, char **argv)
@@ -278,16 +298,22 @@ int main(int argc, char **argv)
   wb_robot_init();
   initialize_devices();
   set_initial_position();
-
+#ifdef CAPTURE_BACK_DEPTH
+  const float *back_depth = wb_range_finder_get_range_image(kinectRange);
+  int w = wb_range_finder_get_width(kinectRange);
+  int h = wb_range_finder_get_height(kinectRange);
+  save_back_depth(w, h, back_depth);
+#endif
+  init_depth_detector();
 
   while (wb_robot_step(TIME_STEP) != -1) {
-
+    detect_obj();
   };
 
   /* Enter your cleanup code here */
 
   /* This is necessary to cleanup webots resources */
   wb_robot_cleanup();
-
+  clear_depth_detect();
   return 0;
 }
