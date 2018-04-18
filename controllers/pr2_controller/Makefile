@@ -21,7 +21,7 @@
 ###
 ### ---- C Sources ----
 ### if your program uses several C source files:
-C_SOURCES = pr2_controller.c depth_detect.c
+C_SOURCES = pr2_controller.c depth_detect.c ../pr2_reach/grasp_plan.c
 ###
 ### ---- C++ Sources ----
 ### if your program uses several C++ source files:

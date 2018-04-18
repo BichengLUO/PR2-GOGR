@@ -24,6 +24,7 @@
 #include <stdlib.h>
 
 #include "depth_detect.h"
+#include "../pr2_reach/grasp_plan.h"
 
 #define TIME_STEP 16
 #define TOLERANCE 0.05
@@ -56,6 +57,9 @@ WbDeviceTag left_finger_motors[4];
 WbDeviceTag left_finger_sensors[4];
 WbDeviceTag left_finger_contact_sensors[2];
 WbDeviceTag right_finger_contact_sensors[2];
+
+WbNodeRef indicator_node;
+WbFieldRef indicator_trans_field;
 
 // Simpler step function
 static void step() {
@@ -290,6 +294,8 @@ void detect_obj() {
   depth_detect(depth, point, &min_x, &min_y, &max_x, &max_y);
   printf("Object depth rect: [%d %d %d %d]\n", min_x, min_y, max_x, max_y);
   wb_display_draw_rectangle(display, min_x, min_y, max_x - min_x, max_y - min_y);
+  printf("Object pos: [%lf, %lf, %lf]\n", point[0], point[1], point[2]);
+  wb_supervisor_field_set_sf_vec3f(indicator_trans_field, point);
 }
 
 int main(int argc, char **argv)
@@ -305,7 +311,8 @@ int main(int argc, char **argv)
   save_back_depth(w, h, back_depth);
 #endif
   init_depth_detector();
-
+  indicator_node = wb_supervisor_node_get_from_def("Indicator");
+  indicator_trans_field = wb_supervisor_node_get_field(indicator_node, "translation");
   while (wb_robot_step(TIME_STEP) != -1) {
     detect_obj();
   };

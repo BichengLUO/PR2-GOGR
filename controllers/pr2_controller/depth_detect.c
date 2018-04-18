@@ -75,8 +75,8 @@ void convert_depth_pixel_to_point(float depth, int x, int y, double point[3]) {
     local_point[1] = depth * sin((y / (double)h - 0.5) * v_fov);
     local_point[2] = depth;
     mat_dot(cam_rot, local_point, point);
-    point[0] += cam_pos[0];
-    point[1] += cam_pos[1];
+    point[0] = cam_pos[0] - point[0];
+    point[1] = cam_pos[1] - point[1];
     point[2] += cam_pos[2];
 }
 
