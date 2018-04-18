@@ -1,0 +1,31 @@
+#VRML_SIM R2018a utf8
+# Microsoft Kinect model
+# tags: deprecated, static
+# Please use Kinect.proto instead
+
+PROTO KinectWithoutFoot [
+  field SFVec3f translation 0 0.02 0
+  field SFRotation rotation 0 1 0 0
+  field SFString name "kinect"
+  field SFInt32 width 320
+  field SFInt32 height 190
+  field SFFloat maxRange 3.5
+  field SFFloat colorNoise 0.0
+  field SFFloat rangeNoise 0.0
+  field SFString cameraName "kinect"
+]
+{
+%{ io.stderr:write("Deprecated PROTO: please use Kinect.proto instead\n") }%
+Kinect {
+  translation IS translation
+  rotation IS rotation
+  name IS name
+  width IS width
+  height IS height
+  maxRange IS maxRange
+  colorNoise IS colorNoise
+  rangeNoise IS rangeNoise
+  cameraName IS cameraName
+  foot FALSE
+  }
+}
