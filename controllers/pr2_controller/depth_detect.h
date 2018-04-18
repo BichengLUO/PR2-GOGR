@@ -12,6 +12,7 @@ void convert_depth_pixel_to_point(float depth, int x, int y, double point[3]);
 
 void mat_dot(const double rot[9], const double point[3], double output[3]);
 void convert_depth_pixel_to_point(float depth, int x, int y, double point[3]);
+void reconstruct_point_cloud(const float *depth, const unsigned char *image, const char *filename);
 void clear_depth_detect();
 
 #endif

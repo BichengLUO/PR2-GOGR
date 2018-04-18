@@ -44,7 +44,7 @@
 
 //#define CAPTURE_BACK_DEPTH
 
-#define IMAGE_TAKEN_CNT 100
+#define IMAGE_TAKEN_CNT 5
 
 // helper constants to distinguish the motors
 enum { FLL_WHEEL, FLR_WHEEL, FRL_WHEEL, FRR_WHEEL, BLL_WHEEL, BLR_WHEEL, BRL_WHEEL, BRR_WHEEL };
@@ -423,8 +423,10 @@ int main(int argc, char **argv)
     double wrist_roll = i * M_PI * 2.0 / IMAGE_TAKEN_CNT;
     set_right_arm_position(0.0, 0.8, -0.5, -2.0, 0.0, wrist_roll, true);
     char filename[100];
-    sprintf(filename, "images_taken/%03d.png", i);
-    wb_camera_save_image(kinectColor, filename, 100);
+    sprintf(filename, "images_taken/%03d.ply", i);
+    const float *depth = wb_range_finder_get_range_image(kinectRange);
+    const unsigned char *image = wb_camera_get_image(kinectColor);
+    reconstruct_point_cloud(depth, image, filename);
     printf("Wrist roll: %lf\n", wrist_roll);
   }
 

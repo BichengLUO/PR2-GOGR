@@ -80,6 +80,42 @@ void convert_depth_pixel_to_point(float depth, int x, int y, double point[3]) {
     point[2] += cam_pos[2];
 }
 
+void reconstruct_point_cloud(const float *depth, const unsigned char *image, const char *filename) {
+    FILE *f = fopen(filename, "w");
+    fprintf(f, "ply\n");
+    fprintf(f, "format ascii 1.0\n");
+    double *point = malloc(w * h * 3 * sizeof(double));
+    unsigned char *color = malloc(w * h * 3 * sizeof(unsigned char));
+    int cnt = 0;
+    for (int x = 0; x < w; x++) {
+        for (int y = 0; y < h; y++) {
+            if (depth[y * w + x] > 1.5 || ALMOST_EQUAL(depth[y * w + x], back_depth[y * w + x])) {
+                continue;
+            }
+            float depth_val = depth[y * w + x];
+            convert_depth_pixel_to_point(depth_val, x, y, point + 3 * cnt);
+            memcpy(color + 3 * cnt, image + y * 4 * w + x * 4, 3 * sizeof(unsigned char));
+            cnt++;
+        }
+    }
+    fprintf(f, "element vertex %d\n", cnt);
+    fprintf(f, "property float x\n");
+    fprintf(f, "property float y\n");
+    fprintf(f, "property float z\n");
+    fprintf(f, "property uchar diffuse_blue\n");
+    fprintf(f, "property uchar diffuse_green\n");
+    fprintf(f, "property uchar diffuse_red\n");
+    fprintf(f, "end_header\n");
+    for (int i = 0; i < cnt; i++) {
+        fprintf(f, "%f %f %f %d %d %d\n",
+                (float)point[i * 3], (float)point[i * 3 + 1], (float)point[i * 3 + 2],
+                color[i * 3], color[i * 3 + 1], color[i * 3 + 2]);
+    }
+    free(point);
+    free(color);
+    fclose(f);
+}
+
 void clear_depth_detect() {
     free(back_depth);
 }
