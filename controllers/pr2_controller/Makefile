@@ -21,7 +21,7 @@
 ###
 ### ---- C Sources ----
 ### if your program uses several C source files:
-### C_SOURCES = my_plugin.c my_clever_algo.c my_graphics.c
+C_SOURCES = pr2_controller.c depth_detect.c
 ###
 ### ---- C++ Sources ----
 ### if your program uses several C++ source files:

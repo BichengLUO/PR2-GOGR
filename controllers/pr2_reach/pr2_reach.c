@@ -42,11 +42,14 @@
 #define SHOULDER_LIFT_CNT 5
 #define UPPER_ARM_ROLL_CNT 5
 #define ELBOW_LIFT_CNT 5
+#define WRIST_LIFT_CNT 5
+
+//#define BUILD_REACHABILITY_MAP
 
 // helper constants to distinguish the motors
 enum { FLL_WHEEL, FLR_WHEEL, FRL_WHEEL, FRR_WHEEL, BLL_WHEEL, BLR_WHEEL, BRL_WHEEL, BRR_WHEEL };
 enum { FL_ROTATION, FR_ROTATION, BL_ROTATION, BR_ROTATION };
-enum { SHOULDER_ROLL, SHOULDER_LIFT, UPPER_ARM_ROLL, ELBOW_LIFT, WRIST_ROLL };
+enum { SHOULDER_ROLL, SHOULDER_LIFT, UPPER_ARM_ROLL, ELBOW_LIFT, WRIST_LIFT, WRIST_ROLL };
 enum { LEFT_FINGER, RIGHT_FINGER, LEFT_TIP, RIGHT_TIP };
 
 WbDeviceTag kinectColor;
@@ -56,10 +59,10 @@ WbDeviceTag head_tilt_sensor;
 WbDeviceTag torso_motor;
 WbDeviceTag torso_sensor;
 
-WbDeviceTag left_arm_motors[5];
-WbDeviceTag left_arm_sensors[5];
-WbDeviceTag right_arm_motors[5];
-WbDeviceTag right_arm_sensors[5];
+WbDeviceTag left_arm_motors[6];
+WbDeviceTag left_arm_sensors[6];
+WbDeviceTag right_arm_motors[6];
+WbDeviceTag right_arm_sensors[6];
 
 WbDeviceTag right_finger_motors[4];
 WbDeviceTag right_finger_sensors[4];
@@ -93,25 +96,29 @@ void initialize_devices() {
   left_arm_motors[SHOULDER_LIFT] = wb_robot_get_device("l_shoulder_lift_joint");
   left_arm_motors[UPPER_ARM_ROLL] = wb_robot_get_device("l_upper_arm_roll_joint");
   left_arm_motors[ELBOW_LIFT] = wb_robot_get_device("l_elbow_flex_joint");
+  left_arm_motors[WRIST_LIFT] = wb_robot_get_device("l_wrist_flex_joint");
   left_arm_motors[WRIST_ROLL] = wb_robot_get_device("l_wrist_roll_joint");
   left_arm_sensors[SHOULDER_ROLL] = wb_robot_get_device("l_shoulder_pan_joint_sensor");
   left_arm_sensors[SHOULDER_LIFT] = wb_robot_get_device("l_shoulder_lift_joint_sensor");
   left_arm_sensors[UPPER_ARM_ROLL] = wb_robot_get_device("l_upper_arm_roll_joint_sensor");
   left_arm_sensors[ELBOW_LIFT] = wb_robot_get_device("l_elbow_flex_joint_sensor");
+  left_arm_sensors[WRIST_LIFT] = wb_robot_get_device("l_wrist_flex_joint_sensor");
   left_arm_sensors[WRIST_ROLL] = wb_robot_get_device("l_wrist_roll_joint_sensor");
 
   right_arm_motors[SHOULDER_ROLL] = wb_robot_get_device("r_shoulder_pan_joint");
   right_arm_motors[SHOULDER_LIFT] = wb_robot_get_device("r_shoulder_lift_joint");
   right_arm_motors[UPPER_ARM_ROLL] = wb_robot_get_device("r_upper_arm_roll_joint");
   right_arm_motors[ELBOW_LIFT] = wb_robot_get_device("r_elbow_flex_joint");
+  right_arm_motors[WRIST_LIFT] = wb_robot_get_device("r_wrist_flex_joint");
   right_arm_motors[WRIST_ROLL] = wb_robot_get_device("r_wrist_roll_joint");
   right_arm_sensors[SHOULDER_ROLL] = wb_robot_get_device("r_shoulder_pan_joint_sensor");
   right_arm_sensors[SHOULDER_LIFT] = wb_robot_get_device("r_shoulder_lift_joint_sensor");
   right_arm_sensors[UPPER_ARM_ROLL] = wb_robot_get_device("r_upper_arm_roll_joint_sensor");
   right_arm_sensors[ELBOW_LIFT] = wb_robot_get_device("r_elbow_flex_joint_sensor");
+  right_arm_sensors[WRIST_LIFT] = wb_robot_get_device("r_wrist_flex_joint_sensor");
   right_arm_sensors[WRIST_ROLL] = wb_robot_get_device("r_wrist_roll_joint_sensor");
 
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 6; ++i) {
     wb_position_sensor_enable(left_arm_sensors[i], TIME_STEP);
     wb_position_sensor_enable(right_arm_sensors[i], TIME_STEP);
     wb_motor_set_velocity(left_arm_motors[i], 0.5);
@@ -198,46 +205,51 @@ void set_torso_height(double height, bool wait_on_feedback) {
   }
 }
 
-void set_right_arm_position(double shoulder_roll, double shoulder_lift, double upper_arm_roll, double elbow_lift, double wrist_roll, bool wait_on_feedback) {
+void set_right_arm_position(double shoulder_roll, double shoulder_lift, double upper_arm_roll, double elbow_lift, double wrist_lift, double wrist_roll, bool wait_on_feedback) {
   wb_motor_set_position(right_arm_motors[SHOULDER_ROLL], shoulder_roll);
   wb_motor_set_position(right_arm_motors[SHOULDER_LIFT], shoulder_lift);
   wb_motor_set_position(right_arm_motors[UPPER_ARM_ROLL], upper_arm_roll);
   wb_motor_set_position(right_arm_motors[ELBOW_LIFT], elbow_lift);
+  wb_motor_set_position(right_arm_motors[WRIST_LIFT], wrist_lift);
   wb_motor_set_position(right_arm_motors[WRIST_ROLL], wrist_roll);
-  double last_sensors[5];
+  double last_sensors[6];
   if (wait_on_feedback) {
     while (
       ! ALMOST_EQUAL(wb_position_sensor_get_value(right_arm_sensors[SHOULDER_ROLL]), shoulder_roll) ||
       ! ALMOST_EQUAL(wb_position_sensor_get_value(right_arm_sensors[SHOULDER_LIFT]), shoulder_lift) ||
       ! ALMOST_EQUAL(wb_position_sensor_get_value(right_arm_sensors[UPPER_ARM_ROLL]), upper_arm_roll) ||
       ! ALMOST_EQUAL(wb_position_sensor_get_value(right_arm_sensors[ELBOW_LIFT]), elbow_lift) ||
+      ! ALMOST_EQUAL(wb_position_sensor_get_value(right_arm_sensors[WRIST_LIFT]), wrist_lift) ||
       ! ALMOST_EQUAL(wb_position_sensor_get_value(right_arm_sensors[WRIST_ROLL]), wrist_roll)
     ) {
       step();
       //Avoid freezing
-      double cur_sensors[5];
+      double cur_sensors[6];
       cur_sensors[0] = wb_position_sensor_get_value(right_arm_sensors[SHOULDER_ROLL]);
       cur_sensors[1] = wb_position_sensor_get_value(right_arm_sensors[SHOULDER_LIFT]);
       cur_sensors[2] = wb_position_sensor_get_value(right_arm_sensors[UPPER_ARM_ROLL]);
       cur_sensors[3] = wb_position_sensor_get_value(right_arm_sensors[ELBOW_LIFT]);
-      cur_sensors[4] = wb_position_sensor_get_value(right_arm_sensors[WRIST_ROLL]);
+      cur_sensors[4] = wb_position_sensor_get_value(right_arm_sensors[WRIST_LIFT]);
+      cur_sensors[5] = wb_position_sensor_get_value(right_arm_sensors[WRIST_ROLL]);
       if (ALMOST_EQUAL_TOL(cur_sensors[0], last_sensors[0], 0.005) &&
           ALMOST_EQUAL_TOL(cur_sensors[1], last_sensors[1], 0.005) &&
           ALMOST_EQUAL_TOL(cur_sensors[2], last_sensors[2], 0.005) &&
           ALMOST_EQUAL_TOL(cur_sensors[3], last_sensors[3], 0.005) &&
-          ALMOST_EQUAL_TOL(cur_sensors[4], last_sensors[4], 0.005)) {
+          ALMOST_EQUAL_TOL(cur_sensors[4], last_sensors[4], 0.005) &&
+          ALMOST_EQUAL_TOL(cur_sensors[5], last_sensors[5], 0.005)) {
             break;
           }
-      memcpy(last_sensors, cur_sensors, 5 * sizeof(double));
+      memcpy(last_sensors, cur_sensors, 6 * sizeof(double));
     }
   }
 }
 
-void set_left_arm_position(double shoulder_roll, double shoulder_lift, double upper_arm_roll, double elbow_lift, double wrist_roll, bool wait_on_feedback) {
+void set_left_arm_position(double shoulder_roll, double shoulder_lift, double upper_arm_roll, double elbow_lift, double wrist_lift, double wrist_roll, bool wait_on_feedback) {
   wb_motor_set_position(left_arm_motors[SHOULDER_ROLL], shoulder_roll);
   wb_motor_set_position(left_arm_motors[SHOULDER_LIFT], shoulder_lift);
   wb_motor_set_position(left_arm_motors[UPPER_ARM_ROLL], upper_arm_roll);
   wb_motor_set_position(left_arm_motors[ELBOW_LIFT], elbow_lift);
+  wb_motor_set_position(left_arm_motors[WRIST_LIFT], wrist_lift);
   wb_motor_set_position(left_arm_motors[WRIST_ROLL], wrist_roll);
 
   if (wait_on_feedback) {
@@ -246,6 +258,7 @@ void set_left_arm_position(double shoulder_roll, double shoulder_lift, double up
       ! ALMOST_EQUAL(wb_position_sensor_get_value(left_arm_sensors[SHOULDER_LIFT]), shoulder_lift) ||
       ! ALMOST_EQUAL(wb_position_sensor_get_value(left_arm_sensors[UPPER_ARM_ROLL]), upper_arm_roll) ||
       ! ALMOST_EQUAL(wb_position_sensor_get_value(left_arm_sensors[ELBOW_LIFT]), elbow_lift) ||
+      ! ALMOST_EQUAL(wb_position_sensor_get_value(left_arm_sensors[WRIST_LIFT]), wrist_lift) ||
       ! ALMOST_EQUAL(wb_position_sensor_get_value(left_arm_sensors[WRIST_ROLL]), wrist_roll)
     ) {
       step();
@@ -361,7 +374,7 @@ void robot_go_forward(double distance) {
 void set_initial_position() {
   set_head_tilt(M_PI_4, false);
   set_torso_height(0.2, true);
-  set_left_arm_position(2.0, 1.35, 0.0, -2.2, 0.0, true);
+  set_left_arm_position(2.0, 1.35, 0.0, -2.2, 0.0, 0.0, true);
 }
 
 // Create the trail shape with the correct number of coordinates.
@@ -420,11 +433,13 @@ void traverse_all_arm_position() {
   double shoulder_lift_min = wb_motor_get_min_position(right_arm_motors[SHOULDER_LIFT]) + 0.5;
   double upper_arm_roll_min = wb_motor_get_min_position(right_arm_motors[UPPER_ARM_ROLL]) + 0.5;
   double elbow_lift_min = wb_motor_get_min_position(right_arm_motors[ELBOW_LIFT]) + 0.5;
+  double wrist_lift_min = wb_motor_get_min_position(right_arm_motors[WRIST_LIFT]);
 
   double shoulder_roll_max = wb_motor_get_max_position(right_arm_motors[SHOULDER_ROLL]);
   double shoulder_lift_max = wb_motor_get_max_position(right_arm_motors[SHOULDER_LIFT]);
   double upper_arm_roll_max = wb_motor_get_max_position(right_arm_motors[UPPER_ARM_ROLL]);
   double elbow_lift_max = wb_motor_get_max_position(right_arm_motors[ELBOW_LIFT]);
+  double wrist_lift_max = wb_motor_get_max_position(right_arm_motors[WRIST_LIFT]);
 
   for (int i1 = 0; i1 <= SHOULDER_ROLL_CNT; i1++) {
     double shoulder_roll = shoulder_roll_min + (shoulder_roll_max - shoulder_roll_min - 0.01) * i1 / SHOULDER_ROLL_CNT;
@@ -434,43 +449,46 @@ void traverse_all_arm_position() {
         double upper_arm_roll = upper_arm_roll_min + (upper_arm_roll_max - upper_arm_roll_min - 0.01) * i3 / UPPER_ARM_ROLL_CNT;
         for (int i4 = 0; i4 <= ELBOW_LIFT_CNT; i4++) {
           double elbow_lift = elbow_lift_min + (elbow_lift_max - elbow_lift_min - 0.01) * i4 / ELBOW_LIFT_CNT;
-          set_right_arm_position(shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, 0.0, true);
-          const double *l_finger_pos = wb_supervisor_node_get_position(l_finger_node);
-          const double *r_finger_pos = wb_supervisor_node_get_position(r_finger_node);
-          double pos[3] = {(l_finger_pos[0] + r_finger_pos[0]) / 2.0,
-                               (l_finger_pos[1] + r_finger_pos[1]) / 2.0,
-                               (l_finger_pos[2] + r_finger_pos[2]) / 2.0};
-          printf("[%lf, %lf, %lf, %lf] [%lf, %lf, %lf]\n",
-            shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift,
-            pos[0], pos[1], pos[2]);
-          FILE *f = fopen("reachability_map.txt", "a");
-          fprintf(f, "%lf, %lf, %lf, %lf, %lf, %lf, %lf\n",
-            shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift,
-            pos[0], pos[1], pos[2]);
-          fclose(f);
+          for (int i5 = 0; i5 <= WRIST_LIFT_CNT; i5++) {
+            double wrist_lift = wrist_lift_min + (wrist_lift_max - wrist_lift_min - 0.01) * i5 / WRIST_LIFT_CNT;
+            set_right_arm_position(shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, wrist_lift, 0.0, true);
+            const double *l_finger_pos = wb_supervisor_node_get_position(l_finger_node);
+            const double *r_finger_pos = wb_supervisor_node_get_position(r_finger_node);
+            double pos[3] = {(l_finger_pos[0] + r_finger_pos[0]) / 2.0,
+                                (l_finger_pos[1] + r_finger_pos[1]) / 2.0,
+                                (l_finger_pos[2] + r_finger_pos[2]) / 2.0};
+            printf("[%lf, %lf, %lf, %lf, %lf] [%lf, %lf, %lf]\n",
+              shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, wrist_lift,
+              pos[0], pos[1], pos[2]);
+            FILE *f = fopen("reachability_map.txt", "a");
+            fprintf(f, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf\n",
+              shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, wrist_lift,
+              pos[0], pos[1], pos[2]);
+            fclose(f);
 
-          // Add the new target translation in the line set.
-          wb_supervisor_field_set_mf_vec3f(point_field, index, pos);
+            // Add the new target translation in the line set.
+            wb_supervisor_field_set_mf_vec3f(point_field, index, pos);
 
-          // Update the line set indices.
-          if (index > 0) {
-            // Link successive indices.
-            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (index - 1), index - 1);
-            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (index - 1) + 1, index);
-          } else if (index == 0 && first_step == false) {
-            // Link the first and the last indices.
-            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (MAXIMUM_NUMBER_OF_COORDINATES - 1), 0);
-            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (MAXIMUM_NUMBER_OF_COORDINATES - 1) + 1,
-                                            MAXIMUM_NUMBER_OF_COORDINATES - 1);
+            // Update the line set indices.
+            if (index > 0) {
+              // Link successive indices.
+              wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (index - 1), index - 1);
+              wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (index - 1) + 1, index);
+            } else if (index == 0 && first_step == false) {
+              // Link the first and the last indices.
+              wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (MAXIMUM_NUMBER_OF_COORDINATES - 1), 0);
+              wb_supervisor_field_set_mf_int32(coord_index_field, 3 * (MAXIMUM_NUMBER_OF_COORDINATES - 1) + 1,
+                                              MAXIMUM_NUMBER_OF_COORDINATES - 1);
+            }
+            // Unset the next indices.
+            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * index, index);
+            wb_supervisor_field_set_mf_int32(coord_index_field, 3 * index + 1, index);
+
+            // Update global variables.
+            first_step = false;
+            index++;
+            index = index % MAXIMUM_NUMBER_OF_COORDINATES;
           }
-          // Unset the next indices.
-          wb_supervisor_field_set_mf_int32(coord_index_field, 3 * index, index);
-          wb_supervisor_field_set_mf_int32(coord_index_field, 3 * index + 1, index);
-
-          // Update global variables.
-          first_step = false;
-          index++;
-          index = index % MAXIMUM_NUMBER_OF_COORDINATES;
         }
       }
     }
@@ -490,12 +508,12 @@ int main(int argc, char **argv)
   printf("Traversing end\n");
 #endif
 
-  init_planner(SHOULDER_ROLL_CNT, SHOULDER_LIFT_CNT, UPPER_ARM_ROLL_CNT, ELBOW_LIFT_CNT);
-  double arm_params[4];
+  init_planner(SHOULDER_ROLL_CNT, SHOULDER_LIFT_CNT, UPPER_ARM_ROLL_CNT, ELBOW_LIFT_CNT, WRIST_LIFT_CNT);
+  double arm_params[5];
   double target_pos[] = {0.5, 1.0, 0.0};
   plan_grasp(target_pos, arm_params);
   set_gripper(false, true, 0.0, false);
-  set_right_arm_position(arm_params[0], arm_params[1], arm_params[2], arm_params[3], 0.0, true);
+  set_right_arm_position(arm_params[0], arm_params[1], arm_params[2], arm_params[3], arm_params[4], 0.0, true);
   
   while (wb_robot_step(TIME_STEP) != -1) {
 

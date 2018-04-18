@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "depth_detect.h"
+
 #define TIME_STEP 16
 #define TOLERANCE 0.05
 #define ALMOST_EQUAL(a, b) ((a < b + TOLERANCE) && (a > b - TOLERANCE))
@@ -260,12 +262,23 @@ void set_initial_position() {
   set_right_arm_position(0, 1.35, 0.0, -2.2, 0.0, true);
 }
 
+void init_depth_detector() {
+  int w = wb_range_finder_get_width(kinectRange);
+  int h = wb_range_finder_get_width(kinectRange);
+  double h_fov = wb_range_finder_get_fov(kinectRange);
+  double v_fov = 2 * atan(tan(h_fov * 0.5 ) / (w / (double)h));
+  double *cam_pos = wb_supervisor_node_get_position();
+  double *cam_pos = wb_supervisor_node_get_position();
+  init_depth_detect(w, h, h_fov, v_fov, );
+}
+
 int main(int argc, char **argv)
 {
   /* necessary to initialize webots stuff */
   wb_robot_init();
   initialize_devices();
   set_initial_position();
+
 
   while (wb_robot_step(TIME_STEP) != -1) {
 
