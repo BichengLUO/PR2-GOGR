@@ -44,6 +44,8 @@
 
 //#define CAPTURE_BACK_DEPTH
 
+#define IMAGE_TAKEN_CNT 100
+
 // helper constants to distinguish the motors
 enum { FLL_WHEEL, FLR_WHEEL, FRL_WHEEL, FRR_WHEEL, BLL_WHEEL, BLR_WHEEL, BRL_WHEEL, BRR_WHEEL };
 enum { FL_ROTATION, FR_ROTATION, BL_ROTATION, BR_ROTATION };
@@ -416,7 +418,15 @@ int main(int argc, char **argv)
   set_right_arm_position(arm_params[0], arm_params[1], arm_params[2], arm_params[3], arm_params[4], 0.0, true);
   robot_go_forward(0.5);
   set_gripper(false, false, 30.0, true);
-  set_right_arm_position(0.0, 0.5, 0.0, -0.5, 0.0, 0.0, true);
+  set_right_arm_position(0.0, 0.8, -0.5, -2.0, 0.0, 0.0, true);
+  for (int i = 0; i < IMAGE_TAKEN_CNT; i++) {
+    double wrist_roll = i * M_PI * 2.0 / IMAGE_TAKEN_CNT;
+    set_right_arm_position(0.0, 0.8, -0.5, -2.0, 0.0, wrist_roll, true);
+    char filename[100];
+    sprintf(filename, "images_taken/%03d.png", i);
+    wb_camera_save_image(kinectColor, filename, 100);
+    printf("Wrist roll: %lf\n", wrist_roll);
+  }
 
   while (wb_robot_step(TIME_STEP) != -1) {
 
