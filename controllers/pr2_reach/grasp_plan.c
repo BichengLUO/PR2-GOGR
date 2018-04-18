@@ -7,7 +7,7 @@ double *planner_data;
 int total_cnt;
 
 void init_planner(int shoulder_roll_cnt, int shoulder_lift_cnt, int upper_arm_roll_cnt, int elbow_lift_cnt, int wrist_lift_cnt) {
-    FILE *f = fopen("reachability_map.txt", "r");
+    FILE *f = fopen("../pr2_reach/reachability_map.txt", "r");
     total_cnt = shoulder_roll_cnt * shoulder_lift_cnt * upper_arm_roll_cnt * elbow_lift_cnt * wrist_lift_cnt;
     planner_data = malloc(total_cnt * 8 * sizeof(double));
     for (int i = 0; i < total_cnt; i++) {

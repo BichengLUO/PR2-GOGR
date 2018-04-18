@@ -2,8 +2,8 @@
 WorldInfo {
 }
 Viewpoint {
-  orientation 0.9459363327079093 -0.31591903027405427 -0.07348211193081297 5.906795227992675
-  position 0.6392733301741594 2.1999007386780054 4.635436183690445
+  orientation 0.4920101266084802 -0.8514285088730549 -0.18164671643856775 5.499835251838834
+  position 1.6263473043393475 1.4340718150747724 2.0288966448370407
 }
 Background {
   skyColor [
@@ -27,9 +27,31 @@ DirectionalLight {
   ambientIntensity 1
   direction 0 -1 0
 }
-Can {
-  translation 0.7200000000000003 0.6600000000000004 0.03
-}
 DEF Indicator Transform {
   translation 0.6500000000000001 1.3900000000000003 0
+}
+Solid {
+  translation 0.86 0.68 0.19
+  children [
+    Shape {
+      appearance Appearance {
+        texture ImageTexture {
+          url [
+            "textures/tagged_wall.jpg"
+          ]
+        }
+      }
+      geometry Box {
+        size 0.1 0.15 0.05
+      }
+    }
+  ]
+  boundingObject Box {
+    size 0.1 0.15 0.05
+  }
+  physics Physics {
+    centerOfMass [
+      0 0 0
+    ]
+  }
 }
