@@ -44,7 +44,8 @@
 #define ELBOW_LIFT_CNT 5
 #define WRIST_LIFT_CNT 5
 
-//#define BUILD_REACHABILITY_MAP
+#define BUILD_REACHABILITY_MAP
+//#define APPEND_TO_RM_FILE
 
 // helper constants to distinguish the motors
 enum { FLL_WHEEL, FLR_WHEEL, FRL_WHEEL, FRR_WHEEL, BLL_WHEEL, BLR_WHEEL, BRL_WHEEL, BRR_WHEEL };
@@ -460,12 +461,13 @@ void traverse_all_arm_position() {
             printf("[%lf, %lf, %lf, %lf, %lf] [%lf, %lf, %lf]\n",
               shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, wrist_lift,
               pos[0], pos[1], pos[2]);
+#ifdef APPEND_TO_RM_FILE
             FILE *f = fopen("reachability_map.txt", "a");
             fprintf(f, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf\n",
               shoulder_roll, shoulder_lift, upper_arm_roll, elbow_lift, wrist_lift,
               pos[0], pos[1], pos[2]);
             fclose(f);
-
+#endif
             // Add the new target translation in the line set.
             wb_supervisor_field_set_mf_vec3f(point_field, index, pos);
 
