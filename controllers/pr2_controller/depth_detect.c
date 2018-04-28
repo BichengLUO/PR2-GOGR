@@ -165,6 +165,78 @@ void reconstruct_point_cloud_no_gripper(const float *depth, const unsigned char 
     fclose(f);
 }
 
+void make_rotation_matrix(const double *axis_d, double rad, double *rot) {
+    double cos_rad = cos(rad);
+    double sin_rad = sin(rad);
+    double one_cos_rad = 1 - cos_rad;
+    double x = axis_d[0], y = axis_d[1], z = axis_d[2];
+    double x_2 = x * x;
+    double y_2 = y * y;
+    double z_2 = z * z;
+    double x_y = x * y;
+    double x_z = x * z;
+    double y_z = y * z;
+    rot[0] = cos_rad + x_2 * one_cos_rad;
+    rot[1] = x_y * one_cos_rad - z * sin_rad;
+    rot[2] = x_z * one_cos_rad + y * sin_rad;
+    rot[3] = x_y * one_cos_rad + z * sin_rad;
+    rot[4] = cos_rad + y_2 * one_cos_rad;
+    rot[5] = y_z * one_cos_rad - x * sin_rad;
+    rot[6] = x_z * one_cos_rad - y * sin_rad;
+    rot[7] = y_z * one_cos_rad + x * sin_rad;
+    rot[8] = cos_rad + z_2 * one_cos_rad;
+}
+
+void reconstruct_point_cloud_no_gripper_rotated(const float *depth,
+                                                const unsigned char *image,
+                                                const char *filename,
+                                                const float *gripper_depth,
+                                                const double *axis_p,
+                                                const double *axis_d,
+                                                double rad) {
+    double rot[9];
+    make_rotation_matrix(axis_d, rad, rot);
+    FILE *f = fopen(filename, "w");
+    fprintf(f, "ply\n");
+    fprintf(f, "format ascii 1.0\n");
+    double *point = malloc(w * h * 3 * sizeof(double));
+    unsigned char *color = malloc(w * h * 3 * sizeof(unsigned char));
+    int cnt = 0;
+    for (int x = 0; x < w; x++) {
+        for (int y = 0; y < h; y++) {
+            if (depth[y * w + x] > 1.5 || ALMOST_EQUAL(depth[y * w + x], gripper_depth[y * w + x]) ||
+                ALMOST_EQUAL(depth[y * w + x], back_depth[y * w + x])) {
+                continue;
+            }
+            float depth_val = depth[y * w + x];
+            double point_tmp[3];
+            convert_depth_pixel_to_point(depth_val, x, y, point_tmp);
+            point_tmp[0] -= axis_p[0];
+            point_tmp[1] -= axis_p[1];
+            point_tmp[2] -= axis_p[2];
+            mat_dot(rot, point_tmp, point + 3 * cnt);
+            memcpy(color + 3 * cnt, image + y * 4 * w + x * 4, 3 * sizeof(unsigned char));
+            cnt++;
+        }
+    }
+    fprintf(f, "element vertex %d\n", cnt);
+    fprintf(f, "property float x\n");
+    fprintf(f, "property float y\n");
+    fprintf(f, "property float z\n");
+    fprintf(f, "property uchar diffuse_blue\n");
+    fprintf(f, "property uchar diffuse_green\n");
+    fprintf(f, "property uchar diffuse_red\n");
+    fprintf(f, "end_header\n");
+    for (int i = 0; i < cnt; i++) {
+        fprintf(f, "%f %f %f %d %d %d\n",
+                (float)point[i * 3], (float)point[i * 3 + 1], (float)point[i * 3 + 2],
+                color[i * 3], color[i * 3 + 1], color[i * 3 + 2]);
+    }
+    free(point);
+    free(color);
+    fclose(f);
+}
+
 void clear_depth_detect() {
     free(back_depth);
 }

@@ -16,6 +16,14 @@ void mat_dot(const double rot[9], const double point[3], double output[3]);
 void convert_depth_pixel_to_point(float depth, int x, int y, double point[3]);
 void reconstruct_point_cloud(const float *depth, const unsigned char *image, const char *filename);
 void reconstruct_point_cloud_no_gripper(const float *depth, const unsigned char *image, const char *filename, const float *gripper_depth);
+void make_rotation_matrix(const double *axis_d, double rad, double *rot);
+void reconstruct_point_cloud_no_gripper_rotated(const float *depth,
+                                                const unsigned char *image,
+                                                const char *filename,
+                                                const float *gripper_depth,
+                                                const double *axis_p,
+                                                const double *axis_d,
+                                                double rad);
 void clear_depth_detect();
 
 #endif

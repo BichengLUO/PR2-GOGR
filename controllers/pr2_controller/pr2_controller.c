@@ -394,6 +394,33 @@ void detect_obj(double point[3]) {
   wb_supervisor_field_set_sf_vec3f(indicator_trans_field, point);
 }
 
+void get_finger_tip_center(double *pos) {
+  WbNodeRef l_finger_node = wb_supervisor_node_get_from_def("r_gripper_l_finger_tip_link");
+  WbNodeRef r_finger_node = wb_supervisor_node_get_from_def("r_gripper_r_finger_tip_link");
+  const double *l_finger_pos = wb_supervisor_node_get_position(l_finger_node);
+  const double *r_finger_pos = wb_supervisor_node_get_position(r_finger_node);
+  pos[0] = (l_finger_pos[0] + r_finger_pos[0]) / 2.0;
+  pos[1] = (l_finger_pos[1] + r_finger_pos[1]) / 2.0;
+  pos[2] = (l_finger_pos[2] + r_finger_pos[2]) / 2.0;
+}
+
+void get_finger_joint_center(double *pos) {
+  WbNodeRef l_finger_node = wb_supervisor_node_get_from_def("r_gripper_l_finger_link");
+  WbNodeRef r_finger_node = wb_supervisor_node_get_from_def("r_gripper_r_finger_link");
+  const double *l_finger_pos = wb_supervisor_node_get_position(l_finger_node);
+  const double *r_finger_pos = wb_supervisor_node_get_position(r_finger_node);
+  pos[0] = (l_finger_pos[0] + r_finger_pos[0]) / 2.0;
+  pos[1] = (l_finger_pos[1] + r_finger_pos[1]) / 2.0;
+  pos[2] = (l_finger_pos[2] + r_finger_pos[2]) / 2.0;
+}
+
+void normalize_dir(double *dir) {
+  double len = sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+  dir[0] /= len;
+  dir[1] /= len;
+  dir[2] /= len;
+}
+
 int main(int argc, char **argv)
 {
   /* necessary to initialize webots stuff */
@@ -421,9 +448,9 @@ int main(int argc, char **argv)
   double arm_params[5];
   plan_grasp(obj_pos, arm_params);
   set_gripper(false, true, 0.0, false);
-  robot_go_forward(-0.5);
+  robot_go_forward(-0.2);
   set_right_arm_position(arm_params[0], arm_params[1], arm_params[2], arm_params[3], arm_params[4], 0.0, true);
-  robot_go_forward(0.5);
+  robot_go_forward(0.2);
 #ifndef CAPTURE_GRIPPER_DEPTH
   set_gripper(false, false, 30.0, true);
 #endif
@@ -431,6 +458,15 @@ int main(int argc, char **argv)
 #ifdef CAPTURE_GRIPPER_DEPTH
   set_gripper(false, false, 10.0, true);
 #endif
+  double finger_tip_center[3], finger_joint_center[3];
+  get_finger_tip_center(finger_tip_center);
+  get_finger_joint_center(finger_joint_center);
+  double finger_dir[3] = {finger_tip_center[0] - finger_joint_center[0],
+                          finger_tip_center[1] - finger_joint_center[1],
+                          finger_tip_center[2] - finger_joint_center[2]};
+  normalize_dir(finger_dir);
+  printf("Finger tip center: [%lf, %lf, %lf]\n", finger_tip_center[0], finger_tip_center[1], finger_tip_center[2]);
+  printf("Finger direction: [%lf, %lf, %lf]\n", finger_dir[0], finger_dir[1], finger_dir[2]);
   for (int i = 0; i < IMAGE_TAKEN_CNT; i++) {
     double wrist_roll = i * M_PI * 2.0 / IMAGE_TAKEN_CNT;
     set_right_arm_position(0.0, 0.8, -0.5, -2.0, 0.0, wrist_roll, true);
@@ -442,11 +478,17 @@ int main(int argc, char **argv)
 #else
     const unsigned char *image = wb_camera_get_image(kinectColor);
     sprintf(filename, "images_taken/%03d.ply", i);
-    reconstruct_point_cloud_no_gripper(depth, image, filename, gripper_depths[i]);
+    reconstruct_point_cloud_no_gripper_rotated(depth,
+                                               image,
+                                               filename,
+                                               gripper_depths[i],
+                                               finger_tip_center,
+                                               finger_dir,
+                                               wrist_roll);
 #endif
     printf("Wrist roll: %lf\n", wrist_roll);
   }
-
+  
   while (wb_robot_step(TIME_STEP) != -1) {
 
   };

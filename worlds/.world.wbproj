@@ -6,11 +6,11 @@ maximizedDockId: -1
 centralWidgetVisible: 1
 orthographicViewHeight: 1
 textFiles: 0 "controllers/pr2_controller/pr2_controller.c"
+renderingDevicePerspectives: PR2:kinect color;1;0.35;0.103896;0.0826772
 renderingDevicePerspectives: PR2:l_forearm_cam_sensor;0;0.0890625;0.025974;0.019685
 renderingDevicePerspectives: PR2:r_forearm_cam_sensor;0;0.0890625;0.025974;0.019685
-renderingDevicePerspectives: PR2:kinect range;1;0.35;0.137292;0.352363
+renderingDevicePerspectives: PR2:kinect range;1;0.35;0.0686455;0.374016
+renderingDevicePerspectives: PR2:high_def_sensor;0;0.0465686;0.025974;0.0216535
 renderingDevicePerspectives: PR2:wide_stereo_r_stereo_camera_sensor;0;0.0890625;0.025974;0.019685
 renderingDevicePerspectives: PR2:wide_stereo_l_stereo_camera_sensor;0;0.0890625;0.025974;0.019685
-renderingDevicePerspectives: PR2:display;1;0.558333;0.165121;0.848425
-renderingDevicePerspectives: PR2:high_def_sensor;0;0.0465686;0.025974;0.0216535
-renderingDevicePerspectives: PR2:kinect color;1;0.35;0.111317;0.100393
+renderingDevicePerspectives: PR2:display;1;0.35;0.0482374;0.950787
