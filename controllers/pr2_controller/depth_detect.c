@@ -47,6 +47,10 @@ void load_depth(float *depth, const char *name) {
     fclose(f);
 }
 
+const float* get_back_depth() {
+    return back_depth;
+}
+
 void load_back_depth(float *depth) {
     FILE *f = fopen("back_depth.bin", "rb");
     fread(depth, sizeof(float), w * h, f);

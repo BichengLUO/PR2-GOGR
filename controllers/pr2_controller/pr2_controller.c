@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "depth_detect.h"
 #include "../pr2_reach/grasp_plan.h"
@@ -45,6 +46,8 @@
 //#define CAPTURE_BACK_DEPTH
 //#define CAPTURE_GRIPPER_DEPTH
 #define IMAGE_TAKEN_CNT 5
+
+#define MAXIMUM_NUMBER_OF_COORDINATES 1000  // Size of point cloud
 
 // helper constants to distinguish the motors
 enum { FLL_WHEEL, FLR_WHEEL, FRL_WHEEL, FRR_WHEEL, BLL_WHEEL, BLR_WHEEL, BRL_WHEEL, BRR_WHEEL };
@@ -427,6 +430,73 @@ void wait_step(int steps_cnt) {
   }
 }
 
+void create_pointcloud() {
+  // If POINTCLOUD exists in the world then silently removes it.
+  WbNodeRef existing_pc = wb_supervisor_node_get_from_def("POINTCLOUD");
+  if (existing_pc)
+    wb_supervisor_node_remove(existing_pc);
+
+  int i;
+  printf("here");
+  char pc_string[0x10000] = "\0";  // Initialize a big string which will contain the TRAIL node.
+  
+  // Create the POINTCLOUD Shape.
+  strcat(pc_string, "DEF POINTCLOUD Shape {\n");
+  strcat(pc_string, "  appearance Appearance {\n");
+  strcat(pc_string, "    material Material {\n");
+  strcat(pc_string, "      diffuseColor 1 0 0\n");
+  strcat(pc_string, "      emissiveColor 1 0 0\n");
+  strcat(pc_string, "    }\n");
+  strcat(pc_string, "  }\n");
+  strcat(pc_string, "  geometry DEF POINTCLOUD_POINT_SET IndexedLineSet {\n");
+  strcat(pc_string, "    coord Coordinate {\n");
+  strcat(pc_string, "      point [\n");
+  for (i = 0; i < 2 * MAXIMUM_NUMBER_OF_COORDINATES; ++i)
+    strcat(pc_string, "      0 0 0\n");
+  strcat(pc_string, "      ]\n");
+  strcat(pc_string, "    }\n");
+  strcat(pc_string, "    coordIndex [\n");
+  for (i = 0; i < MAXIMUM_NUMBER_OF_COORDINATES; ++i)
+    strcat(pc_string, "    0 0 -1\n");
+  strcat(pc_string, "    ]\n");
+  strcat(pc_string, "  }\n");
+  strcat(pc_string, "}\n");
+
+  // Import POINTCLOUD and append it as the world root nodes.
+  WbFieldRef root_children_field = wb_supervisor_node_get_field(wb_supervisor_node_get_root(), "children");
+  wb_supervisor_field_import_mf_node_from_string(root_children_field, -1, pc_string);
+}
+
+void visualize_pointcloud(int w, int h) {
+  // Get interesting references to the POINTCLOUD subnodes.
+  WbNodeRef pc_point_set_node = wb_supervisor_node_get_from_def("POINTCLOUD_POINT_SET");
+  WbNodeRef coordinates_node = wb_supervisor_field_get_sf_node(wb_supervisor_node_get_field(pc_point_set_node, "coord"));
+  WbFieldRef point_field = wb_supervisor_node_get_field(coordinates_node, "point");
+  WbFieldRef coord_index_field = wb_supervisor_node_get_field(pc_point_set_node, "coordIndex");
+  int cnt = 0;
+  const float *depth = wb_range_finder_get_range_image(kinectRange);
+  const float *back_depth = get_back_depth();
+  for (int x = 0; x < w; x += 5) {
+      for (int y = 0; y < h; y += 5) {
+        if (depth[y * w + x] > 1.5 || ALMOST_EQUAL(depth[y * w + x], back_depth[y * w + x])) {
+          continue;
+        }
+        float depth_val = depth[y * w + x];
+        double point[3];
+        convert_depth_pixel_to_point(depth_val, x, y, point);
+        // Add in the point set.
+        wb_supervisor_field_set_mf_vec3f(point_field, 2 * cnt, point);
+        point[1] += 0.005;
+        point[2] += 0.005;
+        wb_supervisor_field_set_mf_vec3f(point_field, 2 * cnt + 1, point);
+        wb_supervisor_field_set_mf_int32(coord_index_field, 3 * cnt, 2 * cnt);
+        wb_supervisor_field_set_mf_int32(coord_index_field, 3 * cnt + 1, 2 * cnt + 1);
+        cnt++;
+        if (cnt >= MAXIMUM_NUMBER_OF_COORDINATES) return;
+      }
+  }
+}
+
 int main(int argc, char **argv)
 {
   /* necessary to initialize webots stuff */
@@ -438,6 +508,8 @@ int main(int argc, char **argv)
   init_depth_detector();
   double obj_pos[3];
   detect_obj(obj_pos);
+  //create_pointcloud();
+  //visualize_pointcloud(w, h);
 #ifdef CAPTURE_BACK_DEPTH
   const float *back_depth = wb_range_finder_get_range_image(kinectRange);
   save_back_depth(w, h, back_depth);
