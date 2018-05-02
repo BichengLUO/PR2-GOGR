@@ -43,8 +43,8 @@
 #define WRIST_LIFT_CNT 5
 
 //#define CAPTURE_BACK_DEPTH
-#define IMAGE_TAKEN_CNT 5
 //#define CAPTURE_GRIPPER_DEPTH
+#define IMAGE_TAKEN_CNT 5
 
 // helper constants to distinguish the motors
 enum { FLL_WHEEL, FLR_WHEEL, FRL_WHEEL, FRR_WHEEL, BLL_WHEEL, BLR_WHEEL, BRL_WHEEL, BRR_WHEEL };
@@ -421,6 +421,12 @@ void normalize_dir(double *dir) {
   dir[2] /= len;
 }
 
+void wait_step(int steps_cnt) {
+  for (int i = 0; i < steps_cnt; i++) {
+    step();
+  }
+}
+
 int main(int argc, char **argv)
 {
   /* necessary to initialize webots stuff */
@@ -429,20 +435,22 @@ int main(int argc, char **argv)
   set_initial_position();
   int w = wb_range_finder_get_width(kinectRange);
   int h = wb_range_finder_get_height(kinectRange);
+  init_depth_detector();
+  double obj_pos[3];
+  detect_obj(obj_pos);
 #ifdef CAPTURE_BACK_DEPTH
   const float *back_depth = wb_range_finder_get_range_image(kinectRange);
   save_back_depth(w, h, back_depth);
 #endif
-  init_depth_detector();
-  double obj_pos[3];
-  detect_obj(obj_pos);
+#ifndef CAPTURE_GRIPPER_DEPTH
   float *gripper_depths[IMAGE_TAKEN_CNT];
   for (int i = 0; i < IMAGE_TAKEN_CNT; i++) {
     gripper_depths[i] = malloc(w * h * sizeof(float));
     char filename[100];
     sprintf(filename, "gripper_depth/%03d.bin", i);
-    load_gripper_depth(gripper_depths[i], filename);
+    load_depth(gripper_depths[i], filename);
   }
+#endif
 
   init_planner(SHOULDER_ROLL_CNT, SHOULDER_LIFT_CNT, UPPER_ARM_ROLL_CNT, ELBOW_LIFT_CNT, WRIST_LIFT_CNT);
   double arm_params[5];
@@ -453,51 +461,54 @@ int main(int argc, char **argv)
   robot_go_forward(0.2);
 #ifndef CAPTURE_GRIPPER_DEPTH
   set_gripper(false, false, 30.0, true);
+  wait_step(100);
 #endif
   set_right_arm_position(0.0, 0.8, -0.5, -2.0, 0.0, 0.0, true);
 #ifdef CAPTURE_GRIPPER_DEPTH
   set_gripper(false, false, 10.0, true);
 #endif
   double finger_tip_center[3], finger_joint_center[3];
-  get_finger_tip_center(finger_tip_center);
-  get_finger_joint_center(finger_joint_center);
-  double finger_dir[3] = {finger_tip_center[0] - finger_joint_center[0],
-                          finger_tip_center[1] - finger_joint_center[1],
-                          finger_tip_center[2] - finger_joint_center[2]};
-  normalize_dir(finger_dir);
-  printf("Finger tip center: [%lf, %lf, %lf]\n", finger_tip_center[0], finger_tip_center[1], finger_tip_center[2]);
-  printf("Finger direction: [%lf, %lf, %lf]\n", finger_dir[0], finger_dir[1], finger_dir[2]);
   for (int i = 0; i < IMAGE_TAKEN_CNT; i++) {
     double wrist_roll = i * M_PI * 2.0 / IMAGE_TAKEN_CNT;
     set_right_arm_position(0.0, 0.8, -0.5, -2.0, 0.0, wrist_roll, true);
+    wait_step(100);
     const float *depth = wb_range_finder_get_range_image(kinectRange);
+    get_finger_tip_center(finger_tip_center);
+    get_finger_joint_center(finger_joint_center);
+    double finger_dir[3] = {finger_tip_center[0] - finger_joint_center[0],
+                            finger_tip_center[1] - finger_joint_center[1],
+                            finger_tip_center[2] - finger_joint_center[2]};
+    normalize_dir(finger_dir);
+    printf("[%d] Finger tip center: [%lf, %lf, %lf]\n", i, finger_tip_center[0], finger_tip_center[1], finger_tip_center[2]);
+    printf("[%d] Finger joint center: [%lf, %lf, %lf]\n", i, finger_joint_center[0], finger_joint_center[1], finger_joint_center[2]);
+    printf("[%d] Finger direction: [%lf, %lf, %lf]\n", i, finger_dir[0], finger_dir[1], finger_dir[2]);
     char filename[100];
 #ifdef CAPTURE_GRIPPER_DEPTH
     sprintf(filename, "gripper_depth/%03d.bin", i);
-    save_gripper_depth(w, h, depth, filename);
+    save_depth(w, h, depth, filename);
 #else
     const unsigned char *image = wb_camera_get_image(kinectColor);
-    sprintf(filename, "images_taken/%03d.ply", i);
+    sprintf(filename, "pointcloud_taken/%03d.ply", i);
     reconstruct_point_cloud_no_gripper_rotated(depth,
                                                image,
                                                filename,
                                                gripper_depths[i],
                                                finger_tip_center,
                                                finger_dir,
-                                               wrist_roll);
+                                               -wrist_roll);
+    sprintf(filename, "depth_taken/%03d.bin", i);
+    save_depth(w, h, depth, filename);
 #endif
-    printf("Wrist roll: %lf\n", wrist_roll);
+    printf("[%d] Wrist roll: %lf\n", i, wrist_roll);
   }
-  
   while (wb_robot_step(TIME_STEP) != -1) {
 
   };
-
-  /* Enter your cleanup code here */
+#ifndef CAPTURE_GRIPPER_DEPTH
   for (int i = 0; i < IMAGE_TAKEN_CNT; i++) {
     free(gripper_depths[i]);
   }
-  /* This is necessary to cleanup webots resources */
+#endif
   wb_robot_cleanup();
   clear_depth_detect();
   return 0;

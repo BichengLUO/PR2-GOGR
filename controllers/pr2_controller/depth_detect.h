@@ -2,9 +2,9 @@
 #define DEPTH_DETECT
 
 void init_depth_detect(int w_, int h_, double h_fov_, double v_fov_, const double cam_pos_[3], const double cam_rot_[9]);
-void save_gripper_depth(int w, int h, const float *depth, const char *name);
+void save_depth(int w, int h, const float *depth, const char *name);
 void save_back_depth(int w, int h, const float *depth);
-void load_gripper_depth(float *depth, const char *name);
+void load_depth(float *depth, const char *name);
 void load_back_depth(float *depth);
 
 void depth_detect(const float *depth, double point[3],

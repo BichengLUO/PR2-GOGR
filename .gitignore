@@ -4,4 +4,5 @@ controllers/pr2_controller/build/*
 controllers/pr2_controller/pr2_controller
 controllers/pr2_reach/build/*
 controllers/pr2_reach/pr2_reach
-controllers/pr2_controller/images_taken/*
+controllers/pr2_controller/pointcloud_taken/*
+controllers/pr2_controller/depth_taken/*

@@ -6,8 +6,11 @@ maximizedDockId: -1
 centralWidgetVisible: 1
 orthographicViewHeight: 1
 textFiles: 0 "controllers/pr2_reach/pr2_reach.c"
-renderingDevicePerspectives: PR2:high_def_sensor;0;0.00585366;0.00203252;0.00222717
 renderingDevicePerspectives: PR2:wide_stereo_r_stereo_camera_sensor;0;0.0125;0.00406504;0.00222717
+renderingDevicePerspectives: PR2:kinect color;1;0.35;0.113821;0.0935412
+renderingDevicePerspectives: PR2:high_def_sensor;0;0.00585366;0.00203252;0.00222717
 renderingDevicePerspectives: PR2:wide_stereo_l_stereo_camera_sensor;0;0.0125;0.00406504;0.00222717
+renderingDevicePerspectives: PR2:display;1;0.35;0.113821;0.0935412
 renderingDevicePerspectives: PR2:l_forearm_cam_sensor;0;0.0125;0.00406504;0.00222717
 renderingDevicePerspectives: PR2:r_forearm_cam_sensor;0;0.0125;0.00406504;0.00222717
+renderingDevicePerspectives: PR2:kinect range;1;0.35;0.113821;0.0935412

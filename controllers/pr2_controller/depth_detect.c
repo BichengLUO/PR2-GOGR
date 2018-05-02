@@ -29,7 +29,7 @@ void init_depth_detect(int w_, int h_, double h_fov_, double v_fov_, const doubl
     load_back_depth(back_depth);
 }
 
-void save_gripper_depth(int w, int h, const float *depth, const char *name) {
+void save_depth(int w, int h, const float *depth, const char *name) {
     FILE *f = fopen(name, "wb");
     fwrite(depth, sizeof(float), w * h, f);
     fclose(f);
@@ -41,7 +41,7 @@ void save_back_depth(int w, int h, const float *depth) {
     fclose(f);
 }
 
-void load_gripper_depth(float *depth, const char *name) {
+void load_depth(float *depth, const char *name) {
     FILE *f = fopen(name, "rb");
     fread(depth, sizeof(float), w * h, f);
     fclose(f);
