@@ -374,7 +374,7 @@ void set_initial_position() {
 }
 
 void init_depth_detector() {
-  WbNodeRef kinect_node = wb_supervisor_node_get_from_def("kinect");
+  WbNodeRef kinect_node = wb_supervisor_node_get_from_def("kinect.RangeFinder");
   const double *cam_pos = wb_supervisor_node_get_position(kinect_node);
   const double *cam_rot = wb_supervisor_node_get_orientation(kinect_node);
   int w = wb_range_finder_get_width(kinectRange);
