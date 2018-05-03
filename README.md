@@ -15,17 +15,28 @@ In this project, we addressed an approach to reconstruct the geometry structure 
 * Find a 2D bounding box
 * Map the center of bounding box to 3D target position
 
+![loc_present](images/loc_present.gif)
+![localization](images/localization.gif)
+
 ## Grasping
 * Enumerate all possible arm joint parameters
 * Get fingertip positions for each set of joint parameters
 * Seek the nearest fingertip position to get the joint parameters
+
+![grasp_plan](images/grasp_plan.gif)
+![grasp](images/grasp.gif)
 
 ## Point Cloud Reconstrcution
 * Several RGBD images will be captured
 * Map the pixel in RGBDs to the point cloud
 * Remove the gripper depth
 
+![reconstruct](images/reconstruct.gif)
+
 ## Results
+
+![results_with_gripper](images/results_with_gripper.gif)
+![results_without_gripper](images/results_without_gripper.gif)
 
 ## Conclusion
 In this project, we addressed an approach to apply grasping on PR2 to capture a series of depth views of a target object to reconstruct its 3D geometry structure. From this project, we learned to control and manipulate robot on simulator, to implement enumeration method to get the map from arm joint parameters to fingertip positions to deploy the grasp planning, to exploit 2D depth image to calculate 3D target position, and accordingly reconstruct point cloud from it.
