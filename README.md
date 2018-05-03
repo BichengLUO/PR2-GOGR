@@ -34,11 +34,10 @@ In this project, we addressed an approach to reconstruct the geometry structure 
 ![reconstruct](images/reconstruct.gif)
 
 ## Results
-* Reconstructed point cloud with gripper
+* Reconstructed point cloud with gripper (left)
+* Reconstructed point cloud without gripper (right)
 
 ![results_with_gripper](images/results_with_gripper.gif)
-* Reconstructed point cloud without gripper
-
 ![results_without_gripper](images/results_without_gripper.gif)
 
 ## Conclusion
