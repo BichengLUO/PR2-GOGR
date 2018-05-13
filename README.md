@@ -1,6 +1,8 @@
+<img src="images/pr2gogr.png" width="150px" />
+
 # PR2-Based Grasping and Object Geometry Reconstruction
 
-In this project, we addressed an approach to reconstruct the geometry structure of a given object from a series of depth views using Willow Garage's PR2. We first utilize the depth camera to localize the target object that we would like to scan, then make PR2 to grasp the target object using predefined grasp planning algorithm. A set of color images as well as the depth images will be captured and aligned to reconstruct the point cloud for the target object. This report also gives simulated experiment results showing the point cloud reconstruction for the target object.
+PR2-GOGR (**PR2**-Based **G**rasping and **O**bject **G**eometry **R**econstruction) is a COMSE6731 Humanoid Robots Final Project. In this project, we addressed an approach to reconstruct the geometry structure of a given object from a series of depth views using Willow Garage's PR2. We first utilize the depth camera to localize the target object that we would like to scan, then make PR2 to grasp the target object using predefined grasp planning algorithm. A set of color images as well as the depth images will be captured and aligned to reconstruct the point cloud for the target object. This report also gives simulated experiment results showing the point cloud reconstruction for the target object.
 
 [See the slide of this project.](https://docs.google.com/presentation/d/1TUQGebvVdwsOCM7OPhNOCFZgdLJ9O2tyuxnC47piUTU/edit?usp=sharing)
 
